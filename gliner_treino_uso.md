@@ -146,7 +146,7 @@ GLINER_TRAIN=false
 ```
 
 ```bash
-docker compose --profile gliner up -d --build rag-demo-app gliner-bert
+docker compose --profile gliner up -d --build --force-recreate rag-demo-app gliner-bert
 ```
 
 O `setup.sh` sobe o profile `gliner` quando `GLINER_BERT=true`.
@@ -196,7 +196,7 @@ GLINER_TRAIN=true
 ```
 
 ```bash
-docker compose --profile gliner-train up -d --build rag-demo-app gliner-bert-gpu
+docker compose --profile gliner-train up -d --build --force-recreate rag-demo-app gliner-bert-gpu
 ```
 
 O serviço GPU usa `Dockerfile.gpu`, `mem_limit: 8g` e o **mesmo** `container_name: gliner-bert` (hostname interno inalterado). Não suba `gliner` e `gliner-train` ao mesmo tempo: os dois querem a porta 8080 e o mesmo nome de container.
