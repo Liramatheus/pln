@@ -321,11 +321,11 @@ nano .env   # GLINER_BERT=true
 
 ```bash
 # Inferência + treino em CPU
-docker compose --profile gliner up -d --build rag-demo-app gliner-bert
+docker compose --profile gliner up -d --build --force-recreate rag-demo-app gliner-bert
 
 # GPU opcional (não misture com o profile gliner)
 # GLINER_TRAIN=true no .env
-docker compose --profile gliner-train up -d --build rag-demo-app gliner-bert-gpu
+docker compose --profile gliner-train up -d --build --force-recreate rag-demo-app gliner-bert-gpu
 ```
 
 Saúde do serviço Torch: http://localhost:8080/health. Os menus **Entidades (GLiNER)** e **Treinar GLiNER** ficam no lateral mesmo com o container desligado; nesse caso a tela avisa e desativa o botão.
@@ -403,7 +403,7 @@ docker compose logs -f rag-demo-app
 Para Entidades (GLiNER), no `.env` defina `GLINER_BERT=true` e suba com o profile:
 
 ```bash
-docker compose --profile gliner up -d --build rag-demo-app gliner-bert
+docker compose --profile gliner up -d --build --force-recreate rag-demo-app gliner-bert
 ```
 
 ---
@@ -1649,4 +1649,4 @@ Esta versão beta foi especialmente preparada para:
 - **Estudantes de PLN**: Experimentação prática com RAG
 - **Pesquisadores**: Plataforma para testes e desenvolvimento
 - **Educadores**: Ferramenta de ensino completa e funcional
-- **Desenvolvedores**: Base sólida para projetos RAG 
+- **Desenvolvedores**: Base sólida para projetos RAG
