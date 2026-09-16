@@ -49,7 +49,7 @@ O RAG-Demo é uma plataforma voltada para alunos da disciplina de **Processament
 - **Automation**: n8n para workflows e orquestração avançada
 - **LLMs**: OpenAI GPT-4o-mini e Google Gemini para processamento
 - **Containers**: Docker Compose para orquestração completa
-- **GLiNER/BERTimbau** (opcional): container `gliner-bert` com PyTorch CPU (`GLINER_BERT=true`)
+- **GLiNER/BERTimbau** (padrão, desativável): container `gliner-bert` com PyTorch CPU (`GLINER_BERT=true` em `env.example`)
 
 ## 🚀 Instalação e Configuração
 
@@ -62,7 +62,7 @@ Guia pensado para alunos **sem experiência prévia com Docker**. Siga os passos
 3. No terminal Ubuntu (WSL), clone o projeto e rode `./setup.sh`.
 4. Abra http://localhost:5000 no navegador.
 
-Opcional (NER GLiNER): no `.env` use `GLINER_BERT=true` e veja [Entidades (GLiNER) e `--profile gliner`](#gliner-profile).
+NER GLiNER já sobe por padrão (`GLINER_BERT=true` em `env.example`). Para desativar ou entender o profile Compose, veja [Entidades (GLiNER) e `--profile gliner`](#gliner-profile).
 
 **O que é Docker?** Docker empacota a aplicação e seus serviços (banco, storage, n8n, etc.) em *containers*, para que todos rodem o mesmo ambiente sem instalar Python, PostgreSQL ou Qdrant na mão. O Docker Desktop cuida disso no Windows; no WSL você só digita os comandos.
 
@@ -77,7 +77,7 @@ Opcional (NER GLiNER): no `.env` use `GLINER_BERT=true` e veja [Entidades (GLiNE
 | Docker Desktop | Com integração WSL2 |
 | Conta OpenAI + API Key | Obrigatória para embeddings/chat |
 | Git | Instalado no Ubuntu (passo 2) |
-| ~8 GB RAM livres | Recomendado para os serviços padrão; +~4 GB se `GLINER_BERT=true` |
+| ~12 GB RAM livres | Recomendado para os serviços padrão + GLiNER (`GLINER_BERT=true`, ligado por padrão); ~8 GB se desativar o GLiNER |
 
 Alunos em **macOS** ou **Linux nativo**: instale [Docker Desktop](https://docs.docker.com/get-docker/) (ou Docker Engine + Compose), pule os passos de WSL e comece em [Passo 4](#passo-4--obter-a-chave-da-openai).
 
@@ -298,29 +298,37 @@ Use `--dev` **somente se for mexer no código-fonte** (`src/`, `templates/`, `st
 | Editar código-fonte (hot-reload + debug) | `./setup.sh --dev` |
 | Limpar dados com cuidado | `./setup.sh --clean` |
 | Rebuild completo | `./setup.sh --clean --rebuild` |
-| Entidades (GLiNER) / treino BIO | `GLINER_BERT=true` no `.env` e de novo `./setup.sh` |
+| Desativar Entidades (GLiNER) / treino BIO | `GLINER_BERT=false` no `.env` e de novo `./setup.sh` |
 
-Aguarde 1–3 minutos na primeira execução (download de imagens). Com GLiNER, a primeira subida ainda baixa os modelos Hugging Face (~alguns minutos a mais).
+Aguarde 1–3 minutos na primeira execução (download de imagens). O `./setup.sh` padrão já sobe o GLiNER (`GLINER_BERT=true` em `env.example`), então a primeira subida também baixa os modelos Hugging Face (~alguns minutos a mais, ~4 GB).
 
 ---
 
 <a id="gliner-profile"></a>
 
-### Opcional — Entidades (GLiNER) e `--profile gliner`
+### Entidades (GLiNER) e `--profile gliner`
 
-O NER pesado (PyTorch) **não** sobe no `./setup.sh` padrão. O container `gliner-bert` só entra com o **profile Compose** `gliner`. Guia completo: [gliner_treino_uso.md](gliner_treino_uso.md).
+O NER pesado (PyTorch) sobe **por padrão**: `env.example` já traz `GLINER_BERT=true`, e o `./setup.sh` lê essa flag e inclui automaticamente o container `gliner-bert` via **profile Compose** `gliner`. Guia completo: [gliner_treino_uso.md](lessons/gliner_treino_uso.md).
 
-**Pelo `setup.sh` (recomendado).** Não existe `./setup.sh --gliner`. O script já lê o `.env`: com `GLINER_BERT=true` ele chama `docker compose --profile gliner`; com `GLINER_TRAIN=true` usa `--profile gliner-train` (GPU).
+Importante: o profile é uma exigência do Docker Compose, não só do `setup.sh`. Mesmo com `GLINER_BERT=true` no `.env`, um `docker compose up -d` direto (sem `--profile gliner`) **não** sobe o `gliner-bert` — profiles sempre precisam ser passados explicitamente na linha de comando. Use `./setup.sh` (que já faz isso por você) ou lembre do `--profile gliner` nos comandos manuais abaixo.
+
+**Desativar.** Não existe `./setup.sh --no-gliner`. Edite o `.env`:
 
 ```bash
-nano .env   # GLINER_BERT=true
+nano .env   # GLINER_BERT=false
+./setup.sh
+```
+
+**Pelo `setup.sh` (recomendado, já é o padrão).** O script lê o `.env`: com `GLINER_BERT=true` ele chama `docker compose --profile gliner`; com `GLINER_TRAIN=true` usa `--profile gliner-train` (GPU).
+
+```bash
 ./setup.sh
 ```
 
 **Na mão** (sem o script, ou depois de `docker compose down`):
 
 ```bash
-# Inferência + treino em CPU
+# Inferência + treino em CPU (padrão)
 docker compose --profile gliner up -d --build --force-recreate rag-demo-app gliner-bert
 
 # GPU opcional (não misture com o profile gliner)
@@ -362,27 +370,27 @@ docker compose --profile gliner up -d --force-recreate rag-demo-app
 | PostgreSQL | `localhost:5432` | `chat_user` / `chat_password` |
 | pgAdmin | http://localhost:5050 | `admin@example.com` / `admin` |
 | n8n | http://localhost:5678 | `admin` / `admin123` |
-| GLiNER (opcional) | http://localhost:8080/health | — (só com `--profile gliner`) |
+| GLiNER (padrão) | http://localhost:8080/health | — (sobe com `--profile gliner`, ligado por padrão) |
 
 Credenciais padrão são só para ambiente educacional local.
 
-Comandos úteis no dia a dia:
+Comandos úteis no dia a dia. Como o GLiNER está ligado por padrão, use sempre `--profile gliner` (ou `./setup.sh`, que já inclui) em vez de `docker compose` puro — sem o profile o `gliner-bert` não sobe nem aparece no `ps`/`logs`:
 
 ```bash
-docker compose ps              # status
-docker compose logs -f         # logs de todos
-docker compose logs -f rag-demo-app
-docker compose down            # parar
-docker compose up -d           # subir de novo (sem GLiNER)
+docker compose --profile gliner ps              # status (inclui gliner-bert)
+docker compose --profile gliner logs -f         # logs de todos
+docker compose --profile gliner logs -f gliner-bert
+docker compose --profile gliner down            # parar
+docker compose --profile gliner up -d           # subir de novo
 ```
 
-Com `GLINER_BERT=true`, use o profile em **subir e parar** — `docker compose up -d` sozinho não recria o `gliner-bert`:
+Se você desativou o GLiNER (`GLINER_BERT=false`), pode usar os comandos sem o profile normalmente:
 
 ```bash
-docker compose --profile gliner ps
-docker compose --profile gliner logs -f gliner-bert
-docker compose --profile gliner down
-docker compose --profile gliner up -d
+docker compose ps
+docker compose logs -f
+docker compose down
+docker compose up -d
 ```
 
 ---
@@ -396,14 +404,14 @@ cd ~/pln
 cp env.example .env
 nano .env   # preencha OPENAI_API_KEY=sk-...
 mkdir -p uploads volumes/{minio,qdrant,postgres,n8n}
-docker compose up -d
-docker compose logs -f rag-demo-app
+docker compose --profile gliner up -d --build   # GLiNER já vem true em env.example
+docker compose --profile gliner logs -f rag-demo-app
 ```
 
-Para Entidades (GLiNER), no `.env` defina `GLINER_BERT=true` e suba com o profile:
+`env.example` já traz `GLINER_BERT=true`, então mantenha o `--profile gliner` em todo comando `docker compose` manual (subir, parar, ver logs) para incluir o `gliner-bert`. Se preferir desativar o GLiNER, troque para `GLINER_BERT=false` no `.env` e use `docker compose` sem o profile:
 
 ```bash
-docker compose --profile gliner up -d --build --force-recreate rag-demo-app gliner-bert
+docker compose up -d
 ```
 
 ---
@@ -510,7 +518,7 @@ python scripts/test_session_system.py
 - **Busca Lexical**: ranking BM25 (vetor esparso)
 - **Busca Híbrida**: densa + léxica fundidas com RRF ([docs/busca-hibrida.md](docs/busca-hibrida.md))
 - **Entidades (estudo)**: TF-IDF + NER para rascunho de golden set ([docs/entidades-tfidf-ner.md](docs/entidades-tfidf-ner.md))
-- **Entidades (GLiNER)**: BERTimbau + GLiNER em container opcional (sem torch no rag-demo) ([docs/gliner-bertimbau.md](docs/gliner-bertimbau.md), [gliner_treino_uso.md](gliner_treino_uso.md))
+- **Entidades (GLiNER)**: BERTimbau + GLiNER em container opcional (sem torch no rag-demo) ([docs/gliner-bertimbau.md](docs/gliner-bertimbau.md), [gliner_treino_uso.md](lessons/gliner_treino_uso.md))
 - **Treinar GLiNER**: JSON BIO na UI; treino CPU ou GPU; checkpoint para os alunos
 - **Chat Multi-Agente**: respostas de LLM com contexto recuperado
 - **Múltiplas sessões**: conversas independentes com histórico no PostgreSQL
@@ -617,14 +625,15 @@ GET    http://localhost:5678/api     # API n8n
 ├── 📁 config/                      # Configurações auxiliares
 │   └── 📁 pgadmin/                # servers.json do pgAdmin
 ├── 📁 docs/                        # Documentação do sistema
+├── 📁 lessons/                     # Guias educacionais (aulas)
+│   ├── 📄 qdrant_manipulacao_analise_dados.md  # Guia Qdrant (aula)
+│   └── 📄 gliner_treino_uso.md    # Guia GLiNER: treino BIO e inferência
 ├── 📁 tests/                       # Testes unitários
 ├── 📄 app.py                       # Aplicação Flask principal
 ├── 📄 docker-compose.yml           # Configuração containers
 ├── 📄 requirements.txt             # Dependências Python
 ├── 📄 setup.sh                     # Script de instalação
-├── 📄 env.example                  # Template de configuração
-├── 📄 qdrant_manipulacao_analise_dados.md  # Guia Qdrant (aula)
-└── 📄 gliner_treino_uso.md         # Guia GLiNER: treino BIO e inferência
+└── 📄 env.example                  # Template de configuração
 ```
 
 ## 🔄 Fluxos de Dados
@@ -729,9 +738,9 @@ FLASK_DEBUG=false
 # Embedding: openai | gemini  (chaves de config.EMBEDDING_MODELS)
 DEFAULT_EMBEDDING_MODEL=openai
 
-# GLiNER + BERTimbau (opcional; o rag-demo-app não instala torch)
-# true = o setup.sh (e o Compose) usam --profile gliner
-GLINER_BERT=false
+# GLiNER + BERTimbau (padrão, desativável; o rag-demo-app não instala torch)
+# true (padrão) = o setup.sh (e o Compose, via --profile gliner) sobem o gliner-bert
+GLINER_BERT=true
 GLINER_BERT_URL=http://gliner-bert:8080
 GLINER_BERT_TIMEOUT=120
 # Rótulos abertos da tela Entidades (GLiNER). Recrie o rag-demo-app após alterar.
@@ -1269,12 +1278,12 @@ Teste opcional: `python scripts/test-postgres-connection.py` (com dependências 
 **Container `unhealthy` ou `exited`**
 
 ```bash
-docker compose ps
-docker compose logs [nome-do-serviço]
-docker compose up -d
-# Se usa GLiNER:
+docker compose --profile gliner ps
+docker compose --profile gliner logs [nome-do-serviço]
 docker compose --profile gliner up -d
 ```
+
+(Se desativou o GLiNER, pode omitir `--profile gliner`.)
 
 ---
 
@@ -1302,7 +1311,7 @@ docker compose exec postgres psql -U chat_user -d chat_memory -c "SELECT session
 
 **Menus Entidades (GLiNER) / Treinar GLiNER visíveis, botão cinza**
 
-O container Torch não está no ar ou o Flask ainda vê `GLINER_BERT=false`. No `.env`: `GLINER_BERT=true`, depois recrie com o profile:
+O container Torch não está no ar, ou o Flask ainda vê `GLINER_BERT=false` (padrão em `env.example` é `true`, mas seu `.env` pode ter sido criado antes dessa mudança). No `.env`: `GLINER_BERT=true`, depois recrie com o profile:
 
 ```bash
 docker compose --profile gliner up -d --force-recreate rag-demo-app gliner-bert
@@ -1314,6 +1323,25 @@ Ou rode de novo `./setup.sh` com a flag já no `.env`. Saúde: http://localhost:
 **Alterei `GLINER_LABELS` e o NER não mudou**
 
 Salvar o `.env` não basta. Recrie o `rag-demo-app` (comando acima). A lista só entra na tela **Entidades (GLiNER)**; spaCy, regex e PER/ORG/LOC do BERTimbau no modo híbrido não seguem essa variável.
+
+**`gliner-bert` sobe e cai (ou nunca fica `healthy`) com erro de protobuf**
+
+Sintoma típico nos logs (`docker compose --profile gliner logs -f gliner-bert`): algo como `TypeError: Descriptors cannot not be created directly`, `message Descriptor ... incompatible with this protobuf runtime` ou o build falhando na linha `RUN python -c "from google.protobuf import __version__..."` do `Dockerfile`.
+
+Causa mais comum: `services/gliner_bert/requirements.txt` fixava `protobuf` num **range** (`>=4.25.3,<6`), então o `pip install` podia resolver uma versão diferente em cada máquina/data de build — uma máquina acerta uma combinação compatível com `transformers`/`gliner`, outra não. A partir desta atualização o `protobuf` está **fixado** (`==5.29.6`, validado neste projeto), então builds novos já ficam reprodutíveis.
+
+Se ainda ver o erro (por exemplo, numa imagem já construída antes desta mudança):
+
+```bash
+# Confirma a versão instalada dentro do container
+docker compose --profile gliner exec gliner-bert pip show protobuf
+
+# Rebuild sem cache de camadas (força reinstalar com a versão fixada)
+docker compose --profile gliner build --no-cache gliner-bert
+docker compose --profile gliner up -d --force-recreate gliner-bert
+```
+
+Se o erro persistir mesmo com `protobuf==5.29.6`, confira se não há um `requirements.txt` ou cache de pip local sendo montado por engano no container (nenhum volume deste serviço deve tocar `/usr/local/lib/python3.12/site-packages`), e reporte a mensagem completa do log — pode ser incompatibilidade entre `transformers`/`gliner`/`protobuf` numa versão nova do pacote, e o range precisa ser refixado.
 
 ---
 
@@ -1403,8 +1431,8 @@ Este projeto está sob a **MIT License** - veja [LICENSE](LICENSE) para detalhes
 
 ### Documentação
 - 📖 **README**: instalação, arquitetura e troubleshooting
-- 📖 **QDRANT_manipulacao_analise_dados**: Manipulação de vetores no Qdrant ([qdrant_manipulacao_analise_dados.md](https://github.com/kurokijrceub/pln/blob/master/qdrant_manipulacao_analise_dados.md))
-- 📖 **GLiNER (treino e uso)**: JSON BIO, job de treino, checkpoint e inferência ([gliner_treino_uso.md](gliner_treino_uso.md))
+- 📖 **QDRANT_manipulacao_analise_dados**: Manipulação de vetores no Qdrant ([qdrant_manipulacao_analise_dados.md](https://github.com/kurokijrceub/pln/blob/master/lessons/qdrant_manipulacao_analise_dados.md))
+- 📖 **GLiNER (treino e uso)**: JSON BIO, job de treino, checkpoint e inferência ([gliner_treino_uso.md](lessons/gliner_treino_uso.md))
 - 📖 **Entidades (estudo)**: TF-IDF + NER e rascunho de golden set ([docs/entidades-tfidf-ner.md](docs/entidades-tfidf-ner.md))
 - 📖 **Entidades (GLiNER)**: BERTimbau + GLiNER em máquina à parte ([docs/gliner-bertimbau.md](docs/gliner-bertimbau.md))
 
@@ -1423,14 +1451,14 @@ Este projeto está sob a **MIT License** - veja [LICENSE](LICENSE) para detalhes
 - **✅ Top vizinhos**: campo numérico (1–30) para Antes/Depois do TF-IDF nas duas telas de entidades
 - **✅ Top TF-IDF**: colunas Antes → Texto → Depois (top X vizinhos sem stopwords)
 - **✅ Seletor de checkpoint**: Entidades (GLiNER) carrega modelo em disco sem reiniciar (`POST /api/gliner-reload`)
-- **✅ Guia GLiNER**: treino JSON BIO e uso do checkpoint ([gliner_treino_uso.md](gliner_treino_uso.md))
+- **✅ Guia GLiNER**: treino JSON BIO e uso do checkpoint ([gliner_treino_uso.md](lessons/gliner_treino_uso.md))
 - **✅ Treinar GLiNER**: JSON BIO na UI; treino **CPU ou GPU**; checkpoint em `volumes/gliner-checkpoints`
 - **✅ Profile** `gliner` basta para treinar; `gliner-train` só acelera com CUDA
 - **✅ Entidades (GLiNER)**: BERTimbau NER + GLiNER em container opcional (`profile gliner`)
 - **✅ Flag** `GLINER_BERT=true` no `.env`; o rag-demo-app **não** instala torch
 - **✅ Menus** Entidades (GLiNER) e Treinar GLiNER sempre no lateral; aviso se o serviço estiver off
 - **✅ API** `POST /api/gliner-study` (mesmo contrato de entity-study + `backend: gliner_bert`)
-- **✅ Documentação** em [docs/gliner-bertimbau.md](docs/gliner-bertimbau.md) e [gliner_treino_uso.md](gliner_treino_uso.md)
+- **✅ Documentação** em [docs/gliner-bertimbau.md](docs/gliner-bertimbau.md) e [gliner_treino_uso.md](lessons/gliner_treino_uso.md)
 - **✅ Entidades (estudo)**: TF-IDF + spaCy NER + regex para rascunho de golden set (itens 29 e 30)
 - **✅ Menu** Entidades (estudo) após Busca Híbrida
 - **✅ API** `POST /api/entity-study` e export JSON
@@ -1471,7 +1499,7 @@ Este projeto está sob a **MIT License** - veja [LICENSE](LICENSE) para detalhes
 
 ### Melhorias realizadas (3.6.3)
 
-- [x] Guia educacional [gliner_treino_uso.md](gliner_treino_uso.md) (treino BIO, APIs, checkpoint, inferência)
+- [x] Guia educacional [gliner_treino_uso.md](lessons/gliner_treino_uso.md) (treino BIO, APIs, checkpoint, inferência)
 
 ### Melhorias realizadas (3.6.2)
 
