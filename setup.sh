@@ -630,7 +630,8 @@ fi
 
 log_success "Arquivos do projeto verificados"
 
-# GLiNER + BERTimbau: profile opcional (não sobe no compose padrão)
+# GLiNER + BERTimbau: sobe via profile Compose, ligado por padrão em env.example
+# (GLINER_BERT=true). Para desativar, troque para false no .env antes de rodar.
 gliner_bert_enabled() {
     [ -f .env ] || return 1
     grep -qiE '^[[:space:]]*GLINER_BERT[[:space:]]*=[[:space:]]*(true|1|yes)[[:space:]]*$' .env
